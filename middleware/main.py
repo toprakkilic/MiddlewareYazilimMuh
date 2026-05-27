@@ -3,6 +3,7 @@ import re
 import json
 import os
 import time
+from datetime import datetime
 from abc import ABC, abstractmethod
 
 # =====================================================================
@@ -17,14 +18,12 @@ class LogFormatterStrategy(ABC):
 class JSONFormatter(LogFormatterStrategy):
     """Web Developer Rolü için çıktı stratejisi"""
     def format_log(self, log_entry: dict) -> str:
-        # Geliştiriciler için ekstra debug/izlenebilirlik alanı ekleme
         log_entry["enrichment"]["role_tag"] = "[DEV_INFO]"
         return json.dumps(log_entry, ensure_ascii=False) + "\n"
 
 class CSVFormatter(LogFormatterStrategy):
     """Cyber Security Rolü için çıktı stratejisi"""
     def format_log(self, log_entry: dict) -> str:
-        # Güvenlikçiler için virgülle ayrılmış temiz alert formatı
         enrich = log_entry["enrichment"]
         role_tag = "[SECURITY_ALERT]" if log_entry["level"] == "CRITICAL" else "[SECURITY_AUDIT]"
         return f"{log_entry['timestamp']},{role_tag},{log_entry['level']},{log_entry['module']},{log_entry['message']},{enrich['transaction_no']}\n"
@@ -32,15 +31,14 @@ class CSVFormatter(LogFormatterStrategy):
 class HTMLFormatter(LogFormatterStrategy):
     """System Admin Rolü için çıktı stratejisi (Önem Derecesine Göre Vurgulama)"""
     def format_log(self, log_entry: dict) -> str:
-        # Hocanın istediği 'vurgulama (highlighting)' mekanizması
-        bg_color = "#ffffff"  # Varsayılan beyaz
+        bg_color = "#ffffff"  
         text_color = "#000000"
         
         if log_entry["level"] == "CRITICAL":
-            bg_color = "#ffcccc"  # Açık Kırmızı Vurgu
+            bg_color = "#ffcccc"  
             text_color = "#990000"
         elif log_entry["level"] == "ERROR":
-            bg_color = "#fff0b3"  # Açık Sarı Vurgu
+            bg_color = "#fff0b3"  
             text_color = "#b38600"
 
         enrich = log_entry["enrichment"]
@@ -65,15 +63,18 @@ class LogPipeline:
         self.total_processed = 0
         self.start_time = time.time()
 
-        # Rol dosyalarını temiz olarak başlatalım
+        # Raporların üretildiği günün tarih damgası (Format: YYYY-MM-DD)
+        self.date_str = datetime.now().strftime("%Y-%m-%d")
+
+        # Klasörü oluştur
         os.makedirs("output_logs", exist_ok=True)
         self.init_files()
 
-        # Stratejileri tanımlayalım
+        # Dinamik Tarihli Strateji Dosya Haritası
         self.strategies = {
-            "webdev": (JSONFormatter(), "output_logs/webdev.json"),
-            "cybersec": (CSVFormatter(), "output_logs/cybersec.csv"),
-            "sysadmin": (HTMLFormatter(), "output_logs/sysadmin.html")
+            "webdev": (JSONFormatter(), f"output_logs/webdev_{self.date_str}.json"),
+            "cybersec": (CSVFormatter(), f"output_logs/cybersec_{self.date_str}.csv"),
+            "sysadmin": (HTMLFormatter(), f"output_logs/sysadmin_{self.date_str}.html")
         }
 
     def load_mask_config(self):
@@ -81,31 +82,59 @@ class LogPipeline:
             return json.load(f)
 
     def init_files(self):
-        # HTML dosyasının tablosunu açalım
-        with open("output_logs/sysadmin.html", "w") as f:
-            f.write("<html><head><title>System Admin Logs</title></head><body><h2>System Admin Log Dashboard</h2><table border='1' cellpadding='5' cellspacing='0'>")
-        # CSV dosyasının başlıklarını yazalım
-        with open("output_logs/cybersec.csv", "w") as f:
-            f.write("timestamp,role_tag,level,module,message,transaction_no\n")
-        # JSON dosyasını boşaltalım
-        with open("output_logs/webdev.json", "w") as f:
-            f.write("")
+        # 1. HTML Başlığı (Eğer dosya yoksa sıfırdan yazar, varsa dokunmaz)
+        html_file = f"output_logs/sysadmin_{self.date_str}.html"
+        if not os.path.exists(html_file):
+            with open(html_file, "w") as f:
+                f.write(f"<html><head><title>System Admin Logs - {self.date_str}</title></head><body><h2>System Admin Log Dashboard ({self.date_str})</h2><table border='1' cellpadding='5' cellspacing='0'>")
+        
+        # 2. CSV Başlığı (Eğer dosya yoksa başlıkları yazar)
+        csv_file = f"output_logs/cybersec_{self.date_str}.csv"
+        if not os.path.exists(csv_file):
+            with open(csv_file, "w") as f:
+                f.write("timestamp,role_tag,level,module,message,transaction_no\n")
+
+    def anonymize_text(self, text, rule):
+        """Metin içerisindeki hassas verileri akıllıca yıldızlar."""
+        if rule.get("is_email", False):
+            def email_replacer(match):
+                username, domain = match.groups()
+                masked_user = username[0] + (rule["mask_char"] * (len(username) - 1))
+                return f"{masked_user}@{domain}"
+            return re.sub(rule["regex_pattern"], email_replacer, text)
+
+        if rule.get("is_name", False):
+            def name_replacer(match):
+                name, surname = match.groups()
+                masked_name = name[0] + (rule["mask_char"] * (len(name) - 1))
+                masked_surname = surname[0] + (rule["mask_char"] * (len(surname) - 1))
+                return f"Müşteri: {masked_name} {masked_surname}"
+            return re.sub(rule["regex_pattern"], name_replacer, text)
+
+        keep = rule.get("keep_fields", {"start": 0, "end": 0})
+        def generic_replacer(match):
+            val = match.group(0)
+            if len(val) <= (keep["start"] + keep["end"]):
+                return rule["mask_char"] * len(val)
+            
+            start_chars = val[:keep["start"]]
+            end_chars = val[-keep["end"]:] if keep["end"] > 0 else ""
+            middle_masked = rule["mask_char"] * (len(val) - keep["start"] - keep["end"])
+            return f"{start_chars}{middle_masked}{end_chars}"
+            
+        return re.sub(rule["regex_pattern"], generic_replacer, text)
 
     def process_raw_string(self, raw_log: str):
         self.total_received += 1
         
-        # Saniyede bir performans raporu basalım (Hocanın istediği Stres Testi ölçümü)
         current_time = time.time()
         if current_time - self.start_time >= 1.0:
             throughput = self.total_received / (current_time - self.start_time)
             print(f"[PERFORMANS ÖLÇÜMÜ] Gelen Toplam Log: {self.total_received} | İşlenen (Önemli): {self.total_processed} | Saniye Başına İşlem (Throughput): {throughput:.2f} log/sn")
-            # Metrikleri sıfırla
             self.total_received = 0
             self.total_processed = 0
             self.start_time = current_time
 
-        # Regex ile log satırını ayrıştırma
-        # Örnek format: [2026-05-25 12:00:00.123] [INFO] [AUTH] -> Mesaj içeriği
         pattern = r"\[(.*?)\]\s+\[(.*?)\]\s+\[(.*?)\]\s+->\s+(.*)"
         match = re.match(pattern, raw_log.strip())
         if not match:
@@ -113,30 +142,36 @@ class LogPipeline:
 
         timestamp, level, module, message = match.groups()
 
+        # Tarihin değişip değişmediğini kontrol et (Gün döndüyse yeni dosya açar)
+        current_date = datetime.now().strftime("%Y-%m-%d")
+        if current_date != self.date_str:
+            self.date_str = current_date
+            self.init_files()
+            self.strategies = {
+                "webdev": (JSONFormatter(), f"output_logs/webdev_{self.date_str}.json"),
+                "cybersec": (CSVFormatter(), f"output_logs/cybersec_{self.date_str}.csv"),
+                "sysadmin": (HTMLFormatter(), f"output_logs/sysadmin_{self.date_str}.html")
+            }
+
         # -------------------------------------------------------------
-        # FILTER 1: Performans Filtresi (Gereksiz logları eleme)
+        # FILTER 1: Performans Filtresi (Gereksizleri ayır ama tarihli dosyaya yaz)
         # -------------------------------------------------------------
         if level in ["INFO", "WARNING"] or module in ["ACCESS_LOG", "DOCKER_INTERNAL"]:
-            # Önemli olmayan logları doğrudan çöpe atıyoruz, kaynak tüketmiyoruz
+            dropped_file = f"output_logs/dropped_system_{self.date_str}.log"
+            with open(dropped_file, "a") as f:
+                f.write(raw_log.strip() + "\n")
             return
 
         self.total_processed += 1
         self.tx_counter += 1
 
         # -------------------------------------------------------------
-        # FILTER 2: KVKK Filtresi (Dinamik Anonimleştirme)
+        # FILTER 2: KVKK Filtresi (Akıllı Karakter Yıldızlama)
         # -------------------------------------------------------------
         clean_message = message
         if self.mask_config.get("masking_enabled", True):
             for rule in self.mask_config.get("rules", []):
-                regex_pat = rule["regex_pattern"]
-                
-                # Eşleşen KVKK verisini bulalım
-                for found in re.finditer(regex_pat, clean_message):
-                    full_match = found.group(0)
-                    # Sadece yakalanmak istenen hassas kısmı maskeleyelim
-                    # Karmaşık maskeleme lojistiği yerine basitçe [GİZLENDİ] formatına çekiyoruz
-                    clean_message = clean_message.replace(full_match, f"{full_match[:10]}... [KVKK GİZLENDİ]")
+                clean_message = self.anonymize_text(clean_message, rule)
 
         # -------------------------------------------------------------
         # FILTER 3: Zenginleştirme (Enrichment)
@@ -157,8 +192,6 @@ class LogPipeline:
         # -------------------------------------------------------------
         for role, (strategy, file_path) in self.strategies.items():
             formatted_output = strategy.format_log(log_obj)
-            
-            # Veritabanı yerine hocanın istediği gibi dosyaya yazıyoruz
             with open(file_path, "a") as f:
                 f.write(formatted_output)
 

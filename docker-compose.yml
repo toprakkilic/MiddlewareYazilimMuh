@@ -1,20 +1,16 @@
-version: '3.8'
-
 services:
-  # 1. KONTEYNER: ARA KATMAN (SERVER)
   middleware:
-    build: ./middleware       # middleware klasöründeki Dockerfile'ı oku ve derle
+    build: ./middleware
     container_name: borsa_middleware
     ports:
-      - "5001:5001"            # Dış dünyadan veya soketten erişim portu
+      - "5001:5001"
+    environment:
+      - PERFORMANCE_TEST=false  # <--- Testi kapatmak için false yapıyoruz açmak için true yapabilirsiniz
     volumes:
-      # Container içindeki /app/output_logs klasörünü bilgisayarımızdaki ana dizine bağlar.
-      # Böylece üretilen HTML, CSV ve JSON dosyaları anında bilgisayarında belirir.
       - ./output_logs:/app/output_logs
 
-  # 2. KONTEYNER: VERİ ÜRETEN MODÜL (CLIENT)
   data_generator:
-    build: ./data_generator   # data_generator klasöründeki Dockerfile'ı oku ve derle
+    build: ./data_generator
     container_name: borsa_generator
     depends_on:
-      - middleware            # Önce middleware (Server) başlasın, sonra generator başlasın
+      - middleware

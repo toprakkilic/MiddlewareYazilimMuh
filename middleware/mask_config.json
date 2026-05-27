@@ -3,21 +3,27 @@
   "rules": [
     {
       "field_name": "tc_kimlik",
-      "regex_pattern": "TC:\\s*(\\d{11})",
+      "regex_pattern": "\\b\\d{11}\\b",
       "mask_char": "*",
-      "visible_chars_at_end": 2
+      "keep_fields": {"start": 2, "end": 2}
     },
     {
       "field_name": "email",
-      "regex_pattern": "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}",
-      "mask_char": "*",
-      "visible_chars_at_end": 12
+      "regex_pattern": "([a-zA-Z0-9._%+-]+)@([a-zA-Z0-9.-]+\\.[a-zA-Z]{2,})",
+      "is_email": true,
+      "mask_char": "*"
     },
     {
       "field_name": "credit_card",
-      "regex_pattern": "Kart No:\\s*(\\d{4}-\\d{4}-\\d{4}-\\d{4})",
+      "regex_pattern": "\\b\\d{4}-\\d{4}-\\d{4}-\\d{4}\\b",
       "mask_char": "*",
-      "visible_chars_at_end": 5
+      "keep_fields": {"start": 4, "end": 4}
+    },
+    {
+      "field_name": "name_surname",
+      "regex_pattern": "Müşteri:\\s*([A-ZÇĞİÖŞÜ][a-zçğiöşü]+)\\s+([A-ZÇĞİÖŞÜ][a-zçğiöşü]+)",
+      "is_name": true,
+      "mask_char": "*"
     }
   ]
 }
