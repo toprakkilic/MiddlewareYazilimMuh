@@ -32,7 +32,7 @@ class SingletonLogGenerator:
             except socket.error:
                 time.sleep(2)  # Sunucu henüz açılmadıysa 2 saniye bekle
 
-def generate_random_kvkk(self):
+    def generate_random_kvkk(self):
         """Simülasyon için sahte KVKK verileri üretir (50 İsim, 50 Soyisim içerir)."""
         names = [
             "Abdullah", "Toprak", "Ahmet", "Mehmet", "Can", "Elif", "Zeynep", "Ali", "Veli", "Ayşe",
@@ -55,7 +55,7 @@ def generate_random_kvkk(self):
         customer = f"{random.choice(names)} {random.choice(surnames)}"
         return tc, email, card, customer
 
-def create_log_pool(self):
+    def create_log_pool(self):
         """Hocanın istediği tüm varyasyonları içeren genişletilmiş 100 senaryoluk devasa log havuzu."""
         tc, email, card, customer = self.generate_random_kvkk()
         
@@ -175,11 +175,10 @@ def create_log_pool(self):
             {"level": "CRITICAL", "module": "BACKUP_SYSTEM", "msg": f"Ransomware şüphesi: Dosya sisteminde anormal değişim hızı! Sorumlu TC: {tc}"}
         ]
         
-        # İki havuzu birleştirip içinden tamamen rastgele bir log seçiyoruz
         all_logs = dropped_logs + processed_logs
         return random.choice(all_logs)
 
-def start_streaming(self):
+    def start_streaming(self):
         """Sürekli ve yüksek hızda log üreterek soketten gönderir (Stress Testi)."""
         if not self.sock:
             self.connect()
@@ -190,13 +189,8 @@ def start_streaming(self):
                 log_data = self.create_log_pool()
                 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
                 
-                # Ham log string formatı (Bunu middleware ayrıştıracak)
                 log_string = f"[{timestamp}] [{log_data['level']}] [{log_data['module']}] -> {log_data['msg']}\n"
-                
-                # Soket üzerinden gönderim
                 self.sock.sendall(log_string.encode('utf-8'))
-                
-                # Stres testi için bekleme süresini çok küçük tutuyoruz (Saniyede binlerce log)
                 time.sleep(0.001) 
                 
         except (socket.error, BrokenPipeError):
@@ -205,6 +199,5 @@ def start_streaming(self):
             self.start_streaming()
 
 if __name__ == "__main__":
-    # Singleton nesnesi oluşturuluyor ve süreç başlatılıyor
     generator = SingletonLogGenerator(host="middleware", port=5001)
     generator.start_streaming()
