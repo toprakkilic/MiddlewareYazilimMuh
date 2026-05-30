@@ -5,7 +5,7 @@ services:
     ports:
       - "5001:5001"
     environment:
-      - PERFORMANCE_TEST=false  # <--- Testi kapatmak için false yapıyoruz açmak için true yapabilirsiniz
+      - PERFORMANCE_TEST=false 
     volumes:
       - ./output_logs:/app/output_logs
 

@@ -2,7 +2,7 @@
 
 Bu proje, yüksek frekanslı bir borsa simülasyonundan gelen anlık log verilerini yakalayan, performans filtrelemesine tabi tutan, KVKK (Kişisel Verilerin Korunması Kanunu) kapsamında dinamik olarak maskeleyen ve farklı kurumsal rollere göre özelleştirilmiş formatlarda raporlayan distributed (dağıtık) bir **Log Management & Audit** yazılımıdır.
 
-Proje, yazılım mühendisliği dersi (CENG) dönem sonu isterleri doğrultusunda; **2 Mimari Patern (Client-Server, Pipe & Filter)** ve **2 Tasarım Kalıbı (Singleton, Strategy)** kullanılarak tamamen izole Docker konteynerleri üzerinde kurgulanmıştır.
+Proje, yazılım mühendisliği dersi isterleri doğrultusunda; **2 adet Tasarım Kalıbı (Singleton, Strategy)** kullanılarak tamamen izole Docker konteynerleri üzerinde kurgulanmıştır.
 
 ---
 
