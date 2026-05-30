@@ -22,9 +22,9 @@ Gelen her log satırı sırasıyla şu filtrelerden geçer:
 
 - **Filter 2 (KVKK Maskeleme Filtresi):** `mask_config.json` dosyasındaki dinamik kurallara göre metin içindeki TC Kimlik, E-posta, İsim-Soyisim ve Kredi Kartı verilerini karakter bazlı akıllıca yıldızlar (`*`).
 
-- **Filter 3 (Zenginleştirme / Enrichment):** Log nesnesine mikroservis takibi için benzersiz bir `Transaction_ID` (`TX-10000X`) ve metadata enjekte eder.
+- **Filter 3 (Zenginleştirme):** Log nesnesine mikroservis takibi için benzersiz bir `Transaction_ID` (`TX-10000X`) ve metadata enjekte eder.
 
-- **Filter 4 (Biçimlendirme / Strategy Dağıtımı):** Rol tabanlı stratejileri tetikleyerek eş zamanlı çıktı dosyalarını besler.
+- **Filter 4 (Biçimlendirme):** Rol tabanlı stratejileri tetikleyerek eş zamanlı çıktı dosyalarını besler.
 
 ---
 
